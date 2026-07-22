@@ -7,17 +7,17 @@ $_ENV = array_replace_recursive($_ENV, parse_ini_file(__DIR__ . '/support/env', 
 
 // making these will make it so the defaults won't be loaded
 if (!function_exists('orangeExceptionHandler')) {
-    function orangeExceptionHandler()
-    {
-    }
+    function orangeExceptionHandler() {}
 }
 
 if (!function_exists('orangeErrorHandler')) {
-    function orangeErrorHandler()
-    {
-    }
+    function orangeErrorHandler() {}
 }
 
-function logMsg(){}
+function logMsg() {}
+function isLogEnabled()
+{
+    return false;
+}
 
 require __DIR__ . '/unitTestHelper.php';
