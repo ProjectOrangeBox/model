@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use peels\validate\Validate;
+use orange\validate\Validate;
 
 final class ExampleCrudActiveTest extends unitTestHelper
 {

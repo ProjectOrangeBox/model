@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace peels\model;
+namespace orange\model;
 
 use PDO;
 use Throwable;
 use PDOStatement;
-use peels\model\StringBuilder;
+use orange\model\StringBuilder;
 use orange\framework\exceptions\InvalidValue;
-use peels\model\exceptions\Sql as ExceptionsSql;
+use orange\model\exceptions\Sql as ExceptionsSql;
 
 /**
  * Basic SQL abstraction layer

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace peels\model\exceptions;
+namespace orange\model\exceptions;
 
 use Exception;
 

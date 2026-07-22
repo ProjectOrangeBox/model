@@ -6,8 +6,8 @@ A small database model layer over PDO. `Model` is an abstract base you extend pe
 
 ```php
 use PDO;
-use peels\model\Model;
-use peels\validate\interfaces\ValidateInterface;
+use orange\model\Model;
+use orange\validate\interfaces\ValidateInterface;
 
 class UserModel extends Model
 {

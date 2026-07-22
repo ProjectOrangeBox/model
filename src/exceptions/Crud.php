@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace peels\model\exceptions;
+namespace orange\model\exceptions;
 
-use peels\model\exceptions\Model;
+use orange\model\exceptions\Model;
 
 class Crud extends Model
 {

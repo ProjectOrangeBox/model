@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use peels\model\Model;
-use peels\validate\interfaces\ValidateInterface;
+use orange\model\Model;
+use orange\validate\interfaces\ValidateInterface;
 
 class ExampleCrudActive extends Model
 {

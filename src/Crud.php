@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace peels\model;
+namespace orange\model;
 
 use PDO;
-use peels\model\Sql;
+use orange\model\Sql;
 
 class Crud
 {

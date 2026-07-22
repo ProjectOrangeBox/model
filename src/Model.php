@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace peels\model;
+namespace orange\model;
 
 use PDO;
-use peels\validate\interfaces\ValidateInterface;
+use orange\validate\interfaces\ValidateInterface;
 
 abstract class Model
 {

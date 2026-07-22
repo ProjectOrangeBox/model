@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use peels\model\Model;
+use orange\model\Model;
 
 class ExampleModel extends Model
 {

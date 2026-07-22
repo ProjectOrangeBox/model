@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use peels\model\Model;
-use peels\validate\Validate;
+use orange\model\Model;
+use orange\validate\Validate;
 
 final class ModelParentTest extends unitTestHelper
 {
