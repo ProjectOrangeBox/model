@@ -16,24 +16,17 @@ class Crud
     public string $activeColumn = 'is_active';
     public bool $deactiveOnDelete = false;
     public bool $readOnlyActive = false;
-
-    protected array $config = [];
     protected Sql $sql;
-    protected PDO $pdo;
 
-    public function __construct(array $config, PDO $pdo)
+    public function __construct(protected array $config, protected PDO $pdo)
     {
-        $this->config = $config;
-
         // merge config
         foreach (['tablename', 'primaryColumn', 'activeColumn', 'deactiveOnDelete', 'readOnlyActive'] as $variable) {
             $this->$variable = $this->config[$variable] ?? $this->$variable;
         }
 
-        $this->pdo = $pdo;
-
         // setup our own personal version
-        $this->sql = new Sql($config, $pdo);
+        $this->sql = new Sql($this->config, $this->pdo);
 
         // make sure we throw exceptions regardless of config
         $this->sql->throwExceptions(true);
@@ -101,6 +94,6 @@ class Crud
 
     public function readValueById(string $column, $id): mixed
     {
-        return $this->sql->select($column)->from()->wherePrimary($id)->execute(PDO::FETCH_ASSOC)->column(0);
+        return $this->sql->select($column)->from()->wherePrimary($id)->execute()->column(0);
     }
 }

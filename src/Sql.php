@@ -31,8 +31,6 @@ use orange\model\exceptions\Sql as ExceptionsSql;
 
 class Sql
 {
-    // You can change these in you model
-    public PDO $pdo;
     public PDOStatement $pdoStatement;
 
     public string $tablename = '';
@@ -40,8 +38,6 @@ class Sql
     public string $errorFormat = '[%1$s] %2$s';
     public bool $throwException = false;
     public ?string $fetchClass = null;
-
-    protected array $config = [];
 
     protected int $errorCode = 0;
     protected string $errorMsg = '';
@@ -63,16 +59,12 @@ class Sql
 
     protected string $implodeComma = ',';
 
-    public function __construct(array $config, PDO $pdo)
+    public function __construct(protected array $config, public PDO $pdo)
     {
-        $this->config = $config;
-
         // merge config
         foreach (['tablename', 'primaryColumn', 'fetchClass', 'throwException', 'errorFormat'] as $variable) {
             $this->$variable = $this->config[$variable] ?? $this->$variable;
         }
-
-        $this->pdo = $pdo;
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         $this->reset();
@@ -95,7 +87,7 @@ class Sql
 
     public function errorFormat(?string $format = null): string
     {
-        $format = $format ?? $this->errorFormat;
+        $format ??= $this->errorFormat;
 
         return sprintf($format, (string)$this->errorCode, $this->errorMsg);
     }
@@ -136,22 +128,13 @@ class Sql
     {
         $builder = new StringBuilder();
 
-        switch ($this->sqlStatement) {
-            case 'select':
-                $builder->append('SELECT', $this->getSelectColumns(), $this->getFrom(), $this->getJoins(), $this->getWhere(), $this->getOrderBy(), $this->getLimit());
-                break;
-            case 'insert':
-                $builder->append('INSERT', $this->getInto(), $this->getInsertColumns(), 'VALUES', $this->getInsertValues());
-                break;
-            case 'update':
-                $builder->append('UPDATE', $this->getTable(), 'SET', $this->getUpdateSet(), $this->getWhere(), $this->getLimit());
-                break;
-            case 'delete':
-                $builder->append('DELETE', $this->getFrom(), $this->getWhere(), $this->getLimit());
-                break;
-            default:
-                throw new InvalidValue('Unknown SQL statement "' . $this->sqlStatement . '".');
-        }
+        match ($this->sqlStatement) {
+            'select' => $builder->append('SELECT', $this->getSelectColumns(), $this->getFrom(), $this->getJoins(), $this->getWhere(), $this->getOrderBy(), $this->getLimit()),
+            'insert' => $builder->append('INSERT', $this->getInto(), $this->getInsertColumns(), 'VALUES', $this->getInsertValues()),
+            'update' => $builder->append('UPDATE', $this->getTable(), 'SET', $this->getUpdateSet(), $this->getWhere(), $this->getLimit()),
+            'delete' => $builder->append('DELETE', $this->getFrom(), $this->getWhere(), $this->getLimit()),
+            default => throw new InvalidValue('Unknown SQL statement "' . $this->sqlStatement . '".'),
+        };
 
         return trim($builder->get());
     }
@@ -265,7 +248,7 @@ class Sql
         }
 
         foreach ($columns as $column) {
-            if (trim($column) == '*') {
+            if (trim((string) $column) == '*') {
                 $this->columns[] = ['raw' => '*'];
             } else {
                 $this->columns[] = ['column' => $column];
@@ -682,7 +665,7 @@ class Sql
                 $this->updateFetchMode();
 
                 //check if args is associative or sequential?
-                $isAssociative = (array() === $args) ? false : array_keys($args) !== range(0, count($args) - 1);
+                $isAssociative = ([] === $args) ? false : array_keys($args) !== range(0, count($args) - 1);
 
                 if ($isAssociative) {
                     foreach ($args as $identifier => $value) {
@@ -751,14 +734,12 @@ class Sql
 
         if (preg_match('/(?<tablecolumn>.*) (?<as>as) (?<alias>.*)/i', $input, $matches, 0, 0)) {
             $output = $this->escapeTableColumn($matches['tablecolumn']) . ' AS ' . $this->escapeTableColumn($matches['alias']);
-        } elseif (strpos($input, ' ') !== false) {
-            list($a, $b) = explode(' ', $input, 2);
+        } elseif (str_contains($input, ' ')) {
+            [$a, $b] = explode(' ', $input, 2);
             $output = $this->escapeTableColumn($a) . ' AS ' . $this->escapeTableColumn($b);
-        } elseif (strpos($input, '.') !== false) {
+        } elseif (str_contains($input, '.')) {
             // separate on spaces trim and add ` marks. then rejoin on .
-            $output = implode('.', array_map(function ($s) {
-                return '`' . trim($s) . '`';
-            }, explode('.', $input)));
+            $output = implode('.', array_map(fn($s) => '`' . trim((string) $s) . '`', explode('.', $input)));
         } else {
             $output = '`' . trim($input) . '`';
         }
@@ -770,8 +751,8 @@ class Sql
     {
         $input = str_replace([':', '`'], '', trim($input));
 
-        if (strpos($input, '.') !== false) {
-            list($table, $column) = explode('.', $input, 2);
+        if (str_contains($input, '.')) {
+            [$table, $column] = explode('.', $input, 2);
 
             $input = 'table_' . $table . '_column_' . $column;
         } else {
