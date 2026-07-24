@@ -7,6 +7,10 @@ namespace orange\model;
 use PDO;
 use orange\validate\interfaces\ValidateInterface;
 
+/**
+ * @phpstan-consistent-constructor Subclasses (UserModel, ...) keep Model's
+ *     constructor signature, so getInstance()'s `new static()` is safe.
+ */
 abstract class Model
 {
     private static array $instances = [];

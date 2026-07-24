@@ -665,7 +665,7 @@ class Sql
                 $this->updateFetchMode();
 
                 //check if args is associative or sequential?
-                $isAssociative = ([] === $args) ? false : array_keys($args) !== range(0, count($args) - 1);
+                $isAssociative = array_keys($args) !== range(0, count($args) - 1);
 
                 if ($isAssociative) {
                     foreach ($args as $identifier => $value) {
