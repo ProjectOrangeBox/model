@@ -659,9 +659,7 @@ class Sql
             if ($this->limit['offset'] == -1) {
                 $builder->append($this->limit['limit']);
             } else {
-                // one string, because StringBuilder::append() drops anything
-                // that stringifies as empty - an offset of 0 among them
-                $builder->append($this->limit['limit'], 'OFFSET ' . $this->limit['offset']);
+                $builder->append($this->limit['limit'], 'OFFSET', $this->limit['offset']);
             }
         }
 

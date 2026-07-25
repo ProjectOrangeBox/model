@@ -32,8 +32,14 @@ class StringBuilder
         foreach (func_get_args() as $append) {
             $append = (string)$append;
 
-            if (!empty($append)) {
-                $this->append[] = $this->autoTrim ? trim($append) : $append;
+            if ($this->autoTrim) {
+                $append = trim($append);
+            }
+
+            // only a genuinely empty string is dropped - empty() would also
+            // discard a literal 0, which is how 'OFFSET 0' used to disappear
+            if ($append !== '') {
+                $this->append[] = $append;
             }
         }
 
