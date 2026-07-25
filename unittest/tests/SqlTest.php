@@ -337,7 +337,9 @@ final class SqlTest extends unitTestHelper
     public function testWhereRaw1(): void
     {
         $this->assertInstanceOf(Sql::class, $this->instance->whereIn('columnname', [12, 23, 45, 789]));
-        $this->assertEquals('WHERE `columnname` IN (:columnname_IN_0,:columnname_IN_1,:columnname_IN_2,:columnname_IN_3)', $this->instance->getWhere());
+        // the placeholders must be spelled the way the bound keys are, or the
+        // statement executes with nothing bound to them
+        $this->assertEquals('WHERE `columnname` IN (:column_columnname_IN_0,:column_columnname_IN_1,:column_columnname_IN_2,:column_columnname_IN_3)', $this->instance->getWhere());
         $this->assertEquals(['column_columnname_IN_0' => 12, 'column_columnname_IN_1' => 23, 'column_columnname_IN_2' => 45, 'column_columnname_IN_3' => 789], $this->instance->boundValues());
     }
 
@@ -345,7 +347,51 @@ final class SqlTest extends unitTestHelper
     {
         $this->assertInstanceOf(Sql::class, $this->instance->whereRaw('`Price` NOT BETWEEN :price1 AND :price2', [':price1' => 10, ':price2' => 20]));
         $this->assertEquals('WHERE `Price` NOT BETWEEN :price1 AND :price2', $this->instance->getWhere());
-        $this->assertEquals(['column_price1' => 10, 'column_price2' => 20], $this->instance->boundValues());
+        // whereRaw()'s caller writes the placeholders, so the keys bind as given
+        $this->assertEquals(['price1' => 10, 'price2' => 20], $this->instance->boundValues());
+    }
+
+    /**
+     * The builders above only prove the SQL string and the bound array in
+     * isolation - these run the statements, which is what catches a placeholder
+     * that no bound value answers to.
+     */
+    public function testRawAndInConditionsActuallyExecute(): void
+    {
+        $rows = $this->instance->select()->from('main')->whereIn('id', [1, 2])->execute()->rows();
+
+        $this->assertFalse($this->instance->hasError());
+        $this->assertCount(2, $rows);
+
+        $rows = $this->instance->select()->from('main')
+            ->whereColumnRaw('age', 'NOT BETWEEN :low AND :high', ['low' => 10, 'high' => 20])
+            ->execute()->rows();
+
+        $this->assertFalse($this->instance->hasError());
+        $this->assertCount(2, $rows);
+    }
+
+    public function testLimitWithAZeroOffsetKeepsTheOffset(): void
+    {
+        $this->assertInstanceOf(Sql::class, $this->instance->limit(20, 0));
+        $this->assertEquals('LIMIT 20 OFFSET 0', $this->instance->getLimit());
+
+        $rows = $this->instance->select()->from('main')->limit(1, 0)->execute()->rows();
+
+        $this->assertFalse($this->instance->hasError());
+        $this->assertCount(1, $rows);
+    }
+
+    public function testRawSetIsEmittedVerbatimAndBindsNothing(): void
+    {
+        $this->instance->update('main')->setRaw('`age` = `age` + 1')->wherePrimary(1);
+
+        $this->assertEquals('UPDATE `main` SET `age` = `age` + 1 WHERE `main`.`id` = :table_main_column_id', $this->instance->build());
+
+        $this->assertTrue($this->instance->execute()->rowCount() > 0);
+        $this->assertFalse($this->instance->hasError());
+
+        $this->assertEquals(29, $this->instance->select('age')->from('main')->wherePrimary(1)->execute()->column(0));
     }
 
     public function testLimit(): void
@@ -595,6 +641,7 @@ final class SqlTest extends unitTestHelper
         $sqlQuery = $this->instance->select('f.cow as c,f.dog d,f.cat')->from('foobar f')->innerJoin('table2', 'f.id', 'table2.parent.id')->groupStart()->wherePrimary(1)->and()->WhereEqual('moo', 'cow')->groupEnd()->or()->Where('d', '=', 123)->or()->Where('cat', 'yellow')->or()->WhereRaw('CURRDATE() > :thisdate', ['thisdate' => '2012-10-10 11:00:00'])->limit(10, 100)->orderBy('c', 'desc')->build();
 
         $this->assertEquals("SELECT `f`.`cow` AS `c`,`f`.`dog` AS `d`,`f`.`cat` FROM `foobar` AS `f` INNER JOIN `table2` ON `f`.`id` = `table2`.`parent`.`id` WHERE ( `f`.`id` = :table_f_column_id AND `moo` = :column_moo ) OR `d` = :column_d OR `cat` = :column_cat OR CURRDATE() > :thisdate ORDER BY `c` DESC LIMIT 10 OFFSET 100", $sqlQuery);
-        $this->assertEquals(['table_f_column_id' => 1, 'column_moo' => 'cow', 'column_d' => 123, 'column_cat' => 'yellow', 'column_thisdate' => '2012-10-10 11:00:00'], $this->instance->boundValues());
+        // :thisdate was written by the caller, so it binds under that exact name
+        $this->assertEquals(['table_f_column_id' => 1, 'column_moo' => 'cow', 'column_d' => 123, 'column_cat' => 'yellow', 'thisdate' => '2012-10-10 11:00:00'], $this->instance->boundValues());
     }
 }

@@ -2,6 +2,10 @@
 
 A small database model layer over PDO. `Model` is an abstract base you extend per table — it merges config, sets up a `Crud` helper and a `Sql` query builder, and validates input against per-field rules grouped into named rule sets (`create`, `update`, `delete`, ...). `Crud` does the actual insert/update/delete/read work.
 
+`DtoModel` is the same idea with validation coming from an [orange/dto](https://github.com/ProjectOrangeBox/request) class instead of the validate service — one Dto per operation rather than parallel `$rules`/`$ruleSets` arrays.
+
+**A cookbook of worked examples lives in [example.md](example.md)** — `Sql`, `Crud` and `DtoModel`.
+
 ## Example
 
 ```php

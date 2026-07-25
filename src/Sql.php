@@ -384,7 +384,9 @@ class Sql
         foreach ($values as $index => $value) {
             $identifier = $column . '_IN_' . $index;
 
-            $builder->append(':' . $identifier);
+            // the placeholder has to be spelled the way bindValue() stores the
+            // key, or the statement executes with nothing bound to it
+            $builder->append($this->escapeColumnForBind($identifier, true));
 
             $this->bindValue($identifier, $value);
         }
@@ -410,7 +412,11 @@ class Sql
 
         if (is_array($value)) {
             foreach ($value as $column => $value) {
-                $this->bindValue($column, $value);
+                // the caller wrote the placeholders into $raw themselves, so the
+                // keys bind exactly as given - running them through
+                // escapeColumnForBind() would prefix them into something the
+                // statement never mentions
+                $this->bound[ltrim((string) $column, ':')] = $value;
             }
         }
 
@@ -550,10 +556,14 @@ class Sql
 
         foreach ($this->columns as $record) {
             if (isset($record['raw'])) {
+                // a raw fragment is emitted verbatim and has nothing to bind -
+                // it carries no 'column'/'value' to bind either
                 $builder->append($record['raw']);
-            } else {
-                $builder->append($this->escapeTableColumn($record['column']) . ' = ' . $this->escapeColumnForBind($record['column'], true));
+
+                continue;
             }
+
+            $builder->append($this->escapeTableColumn($record['column']) . ' = ' . $this->escapeColumnForBind($record['column'], true));
 
             $this->bindValue($record['column'], $record['value']);
         }
@@ -630,7 +640,9 @@ class Sql
             if ($this->limit['offset'] == -1) {
                 $builder->append($this->limit['limit']);
             } else {
-                $builder->append($this->limit['limit'], 'OFFSET', $this->limit['offset']);
+                // one string, because StringBuilder::append() drops anything
+                // that stringifies as empty - an offset of 0 among them
+                $builder->append($this->limit['limit'], 'OFFSET ' . $this->limit['offset']);
             }
         }
 
