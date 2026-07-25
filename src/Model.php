@@ -5,16 +5,23 @@ declare(strict_types=1);
 namespace orange\model;
 
 use PDO;
+use orange\framework\base\Singleton;
 use orange\validate\interfaces\ValidateInterface;
 
 /**
  * @phpstan-consistent-constructor Subclasses (UserModel, ...) keep Model's
  *     constructor signature, so getInstance()'s `new static()` is safe.
+ *
+ * Singleton supplies the per-class instance cache and newInstance(). Its
+ * getInstance() is declared getInstance(): mixed and forwards func_get_args(),
+ * which PHP will not let a subclass narrow to a real signature - that is a
+ * fatal, not a warning - so the types live in annotations instead.
+ *
+ * @method static static getInstance(array $config, PDO $pdo, ValidateInterface $validate)
+ * @method static static newInstance(array $config, PDO $pdo, ValidateInterface $validate)
  */
-abstract class Model
+abstract class Model extends Singleton
 {
-    private static array $instances = [];
-
     // extended by child models
     protected array $rules = [];
     /* rules example:
@@ -75,28 +82,6 @@ abstract class Model
         $this->crud = new Crud($this->config, $pdo);
     }
 
-    public static function getInstance(array $config, PDO $pdo, ValidateInterface $validate): self
-    {
-        $subclass = static::class;
-
-        if (!isset(self::$instances[$subclass])) {
-            self::$instances[$subclass] = new static($config, $pdo, $validate);
-        }
-
-        return self::$instances[$subclass];
-    }
-
-    /**
-     * Build a model without touching the shared instance cache.
-     *
-     * This should ONLY be called if you MUST get a new instance - for testing
-     * etc. getInstance() caches per class for the life of the process, which in
-     * a test run would hand every later test the first one's PDO connection.
-     */
-    public static function newInstance(array $config, PDO $pdo, ValidateInterface $validate): self
-    {
-        return new static($config, $pdo, $validate);
-    }
 
     public function getRules(string $set): array
     {
