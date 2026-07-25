@@ -394,6 +394,37 @@ final class SqlTest extends unitTestHelper
         $this->assertEquals(29, $this->instance->select('age')->from('main')->wherePrimary(1)->execute()->column(0));
     }
 
+    /**
+     * The two-argument and array forms name the column separately from the
+     * expression - both used to drop the expression on the floor and emit a
+     * bare "SET age".
+     */
+    public function testRawSetWithASeparateColumnComposesTheAssignment(): void
+    {
+        $this->instance->update('main')->setRaw('age', '`age` + 1')->wherePrimary(1);
+
+        $this->assertEquals('UPDATE `main` SET `age` = `age` + 1 WHERE `main`.`id` = :table_main_column_id', $this->instance->build());
+
+        $this->assertInstanceOf(Sql::class, $this->instance->reset());
+
+        $this->instance->update('main')->setRaw(['age' => '`age` + 1'])->wherePrimary(1);
+
+        $this->assertEquals('UPDATE `main` SET `age` = `age` + 1 WHERE `main`.`id` = :table_main_column_id', $this->instance->build());
+    }
+
+    /**
+     * A raw INSERT value keeps its column so the column list still lines up
+     * with the value list, and binds nothing.
+     */
+    public function testRawInsertValueEmitsTheExpressionAndBindsNothing(): void
+    {
+        $this->instance->insert('main')->value('first_name', 'Rawly')->valueRaw('age', '20 + 5');
+
+        $this->assertEquals('INSERT INTO `main` (`first_name`,`age`) VALUES (:column_first_name,20 + 5)', $this->instance->build());
+
+        $this->assertEquals(['column_first_name' => 'Rawly'], $this->instance->boundValues());
+    }
+
     public function testLimit(): void
     {
         $this->assertInstanceOf(Sql::class, $this->instance->limit(1));
@@ -433,12 +464,12 @@ final class SqlTest extends unitTestHelper
         $this->assertInstanceOf(Sql::class, $this->instance->OrderBy('tablename.first_name'));
         $this->assertInstanceOf(Sql::class, $this->instance->OrderBy('last_name', 'az'));
 
-        $this->assertEquals('ORDER BY `tablename`.`first_name`,`last_name` DESC', $this->instance->getOrderBy());
+        $this->assertEquals('ORDER BY `tablename`.`first_name`,`last_name` ASC', $this->instance->getOrderBy());
 
         $this->assertInstanceOf(Sql::class, $this->instance->OrderBy('tablename.first_name'));
         $this->assertInstanceOf(Sql::class, $this->instance->OrderBy('last_name', 'za'));
 
-        $this->assertEquals('ORDER BY `tablename`.`first_name`,`last_name` ASC', $this->instance->getOrderBy());
+        $this->assertEquals('ORDER BY `tablename`.`first_name`,`last_name` DESC', $this->instance->getOrderBy());
     }
 
     // join(string $joinTable, string $on, string $left, string $right): self

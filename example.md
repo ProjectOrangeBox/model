@@ -99,7 +99,7 @@ $sql->select()->from()
 
 ```php
 $sql->select()->from()
-    ->orderBy('last_name', 'asc')     // 'a' and 'd' are accepted shorthand
+    ->orderBy('last_name', 'asc')     // 'a'/'az' and 'd'/'za' are accepted shorthand
     ->orderBy('age', 'desc')
     ->limit(20, 40)                   // LIMIT 20 OFFSET 40
     ->execute()
@@ -131,12 +131,21 @@ $gone = $sql->delete()->from()->wherePrimary($id)
     ->execute()->rowCount() > 0;
 ```
 
-`setRaw()` is the escape hatch for an expression that must not be bound. Pass
-the whole assignment as one string — it is emitted verbatim, so escape it
-yourself:
+`setRaw()` is the escape hatch for an expression that must not be bound. It is
+emitted verbatim, so escape it yourself. Either pass the whole assignment as one
+string, or name the column and the expression separately:
 
 ```php
 $sql->update()->setRaw('`views` = `views` + 1')->wherePrimary($id)->execute();
+$sql->update()->setRaw('views', '`views` + 1')->wherePrimary($id)->execute();
+$sql->update()->setRaw(['views' => '`views` + 1'])->wherePrimary($id)->execute();
+```
+
+`valueRaw()`/`valuesRaw()` do the same for an INSERT, where the expression
+becomes the value:
+
+```php
+$sql->insert()->value('name', $name)->valueRaw('created', 'NOW()')->execute();
 ```
 
 ### Inspecting and error handling

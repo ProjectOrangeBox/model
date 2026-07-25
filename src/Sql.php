@@ -190,8 +190,18 @@ class Sql
             foreach ($arg1 as $column => $value) {
                 $this->set($column, $value, $isRaw);
             }
+        } elseif ($isRaw) {
+            /**
+             * Two raw call styles, and the column has to survive both:
+             *   setRaw('`age` = `age` + 1')  - one self-contained fragment, no
+             *     separate column to record
+             *   setRaw('age', '`age` + 1')   - column named separately, which the
+             *     getters need to build an INSERT column list or to compose
+             *     "column = expression" for an UPDATE
+             */
+            $this->columns[] = $value === null ? ['raw' => $arg1] : ['column' => $arg1, 'raw' => $value];
         } else {
-            $this->columns[] = $isRaw ? ['raw' => $arg1] : ['column' => $arg1, 'value' => $value];
+            $this->columns[] = ['column' => $arg1, 'value' => $value];
         }
 
         return $this;
@@ -440,12 +450,12 @@ class Sql
 
     public function orderBy(string $column, string $dir = ''): self
     {
-        // some basic shorthand
+        // some basic shorthand - 'az' reads A to Z, so it ascends, and 'za' descends
         $shorthand = [
             'd' => 'DESC',
             'a' => 'ASC',
-            'az' => 'DESC',
-            'za' => 'ASC'
+            'az' => 'ASC',
+            'za' => 'DESC'
         ];
 
         $dir = $shorthand[$dir] ?? strtoupper($dir);
@@ -521,7 +531,10 @@ class Sql
         $builder = new StringBuilder($this->implodeComma);
 
         foreach ($this->columns as $record) {
-            $builder->append($this->escapeTableColumn($record['column']));
+            // a self-contained raw fragment names no column, so it can't appear here
+            if (isset($record['column'])) {
+                $builder->append($this->escapeTableColumn($record['column']));
+            }
         }
 
         return $builder->get('(', ')');
@@ -535,11 +548,14 @@ class Sql
         $builder = new StringBuilder($this->implodeComma);
 
         foreach ($this->columns as $record) {
+            // a raw expression is the value itself - emitted verbatim, nothing to bind
             if (isset($record['raw'])) {
                 $builder->append($record['raw']);
-            } else {
-                $builder->append($this->escapeColumnForBind($record['column'], true));
+
+                continue;
             }
+
+            $builder->append($this->escapeColumnForBind($record['column'], true));
 
             $this->bindValue($record['column'], $record['value']);
         }
@@ -556,9 +572,12 @@ class Sql
 
         foreach ($this->columns as $record) {
             if (isset($record['raw'])) {
-                // a raw fragment is emitted verbatim and has nothing to bind -
-                // it carries no 'column'/'value' to bind either
-                $builder->append($record['raw']);
+                // a raw expression is emitted verbatim and binds nothing. With a
+                // column it composes "column = expression"; without one the
+                // fragment already carries its own column.
+                $builder->append(isset($record['column'])
+                    ? $this->escapeTableColumn($record['column']) . ' = ' . $record['raw']
+                    : $record['raw']);
 
                 continue;
             }
