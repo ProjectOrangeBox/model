@@ -86,6 +86,18 @@ abstract class Model
         return self::$instances[$subclass];
     }
 
+    /**
+     * Build a model without touching the shared instance cache.
+     *
+     * This should ONLY be called if you MUST get a new instance - for testing
+     * etc. getInstance() caches per class for the life of the process, which in
+     * a test run would hand every later test the first one's PDO connection.
+     */
+    public static function newInstance(array $config, PDO $pdo, ValidateInterface $validate): self
+    {
+        return new static($config, $pdo, $validate);
+    }
+
     public function getRules(string $set): array
     {
         // we only need these rules

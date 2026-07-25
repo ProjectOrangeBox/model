@@ -16,11 +16,13 @@
     },
     "require": {
         "php": ">=8.4",
+        "orange/dto": "dev-master",
         "orange/framework": "dev-master",
         "orange/validate": "dev-master"
     },
     "require-dev": {
-        "phpunit/phpunit": "^13.2"
+        "phpunit/phpunit": "^13.2",
+        "orange/testkit": "dev-master"
     },
     "autoload": {
         "psr-4": {

@@ -20,4 +20,3 @@ function isLogEnabled()
     return false;
 }
 
-require __DIR__ . '/unitTestHelper.php';

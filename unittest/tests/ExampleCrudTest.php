@@ -11,21 +11,17 @@ final class ExampleCrudTest extends unitTestHelper
 
     protected function setUp(): void
     {
-        // connect to test db
-        $this->pdo = new PDO('mysql:host=' . $_ENV['phpunit']['host'] . ';dbname=' . $_ENV['phpunit']['database'], $_ENV['phpunit']['username'], $_ENV['phpunit']['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-
-        // setup table(s) and data
-        $this->pdo->query(file_get_contents(__DIR__ . '/support/setup.sql'));
-
+        require_once __DIR__ . '/support/TestDatabase.php';
         require_once __DIR__ . '/support/ExampleCrud.php';
 
-        // instance of Model Abstract Class
-        $this->instance = ExampleCrud::getInstance([], $this->pdo, Validate::getInstance([]));
-    }
+        // a private in-memory database per test - it goes away with the
+        // connection, so there is nothing to tear down afterwards
+        $this->pdo = TestDatabase::sqlite();
 
-    protected function tearDown(): void
-    {
-        $this->pdo->query(file_get_contents(__DIR__ . '/support/teardown.sql'));
+        // newInstance, not getInstance: getInstance() caches per class for the
+        // whole process, which would hand every later test the first test's
+        // (already discarded) connection
+        $this->instance = ExampleCrud::newInstance([], $this->pdo, Validate::newInstance([]));
     }
 
     public function testCreateUser(): void

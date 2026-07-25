@@ -41,6 +41,10 @@ class Sql
 
     protected int $errorCode = 0;
     protected string $errorMsg = '';
+    // tracked separately from errorCode: a SQLSTATE isn't numeric, so an int
+    // cast of it can't tell "no error" from one whose state starts with a
+    // letter - MySQL's 42S22 casts to 42, but SQLite's HY000 casts to 0
+    protected bool $hasError = false;
 
     protected string $lastSQL = '';
     protected array $lastArgs = [];
@@ -72,7 +76,7 @@ class Sql
 
     public function hasError(): bool
     {
-        return $this->errorCode != 0;
+        return $this->hasError;
     }
 
     public function error(): string
@@ -106,6 +110,7 @@ class Sql
 
         $this->errorCode = 0;
         $this->errorMsg = '';
+        $this->hasError = false;
 
         $this->where = [];
         $this->orderBy = [];
@@ -697,6 +702,7 @@ class Sql
     {
         $this->errorCode = (int)$e->getCode();
         $this->errorMsg = $e->getMessage();
+        $this->hasError = true;
 
         if ($this->throwException) {
             throw new ExceptionsSql((string)$e->getMessage(), (int)$e->getCode());

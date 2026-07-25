@@ -11,11 +11,11 @@ final class SqlTest extends unitTestHelper
 
     protected function setUp(): void
     {
-        // connect to test db
-        $this->pdo = new PDO('mysql:host=' . $_ENV['phpunit']['host'] . ';dbname=' . $_ENV['phpunit']['database'], $_ENV['phpunit']['username'], $_ENV['phpunit']['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        require_once __DIR__ . '/support/TestDatabase.php';
 
-        // setup table(s) and data
-        $this->pdo->query(file_get_contents(__DIR__ . '/support/setup.sql'));
+        // a private in-memory database per test - it goes away with the
+        // connection, so there is nothing to tear down afterwards
+        $this->pdo = TestDatabase::sqlite();
 
         $this->instance = new Sql([
             'tablename' => 'main',
@@ -27,23 +27,25 @@ final class SqlTest extends unitTestHelper
         ], $this->pdo);
     }
 
-    protected function tearDown(): void
-    {
-        $this->pdo->query(file_get_contents(__DIR__ . '/support/teardown.sql'));
-    }
 
     /* Public Method Tests */
 
+    /**
+     * The SQLSTATE and the wording of a "no such column" complaint belong to the
+     * driver, so assert the behaviour that is ours: the failure is recorded, and
+     * it is reported through errorFormat().
+     */
     public function testHasError(): void
     {
         $this->assertInstanceOf(Sql::class, $this->instance->select('foobar')->from()->execute());
 
         $this->assertTrue($this->instance->hasError());
 
-        $error = '[42] SQLSTATE[42S22]: Column not found: 1054 Unknown column \'foobar\' in \'field list\'';
+        $error = $this->instance->error();
 
+        $this->assertStringContainsString('foobar', $error);
+        $this->assertStringMatchesFormat('[%d] SQLSTATE[%s', $error);
         $this->assertEquals([$error], $this->instance->errors());
-        $this->assertEquals($error, $this->instance->error());
     }
 
     public function testErrorFormat(): void
@@ -52,7 +54,14 @@ final class SqlTest extends unitTestHelper
 
         $this->assertInstanceOf(Sql::class, $this->instance->select('foobar')->from()->execute());
 
-        $this->assertEquals('{42}::SQLSTATE[42S22]: Column not found: 1054 Unknown column \'foobar\' in \'field list\'', $this->instance->errorFormat());
+        $this->assertStringMatchesFormat('{%d}::SQLSTATE[%s', $this->instance->errorFormat());
+    }
+
+    public function testNoErrorWhenTheQuerySucceeds(): void
+    {
+        $this->assertInstanceOf(Sql::class, $this->instance->select()->from()->execute());
+
+        $this->assertFalse($this->instance->hasError());
     }
 
     public function testGetLast(): void
