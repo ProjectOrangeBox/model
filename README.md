@@ -4,6 +4,8 @@ A small database model layer over PDO. `Model` is an abstract base you extend pe
 
 `DtoModel` is the same idea with validation coming from an [orange/dto](https://github.com/ProjectOrangeBox/request) class instead of the validate service — one Dto per operation rather than parallel `$rules`/`$ruleSets` arrays.
 
+Validation is in fact the only thing the two differ on: the table/fetch settings, the config they are assembled into and the ready-made `$sql`/`$crud` all come from `ModelAbstract`, which both extend and neither of your classes should.
+
 **A cookbook of worked examples lives in [example.md](example.md)** — `Sql`, `Crud` and `DtoModel`.
 
 ## Example

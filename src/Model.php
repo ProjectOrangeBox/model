@@ -5,10 +5,18 @@ declare(strict_types=1);
 namespace orange\model;
 
 use PDO;
-use orange\framework\base\Singleton;
 use orange\validate\interfaces\ValidateInterface;
 
 /**
+ * A model whose validation comes from the validate service.
+ *
+ * An operation's contract lives in two parallel arrays - $rules per field and
+ * $ruleSets naming which fields take part - and the fields handed in are
+ * filtered down to the set before they are validated. See DtoModel for the
+ * same idea with a Dto class carrying the contract instead.
+ *
+ * The table settings, the $sql and the $crud come from ModelAbstract.
+ *
  * @phpstan-consistent-constructor Subclasses (UserModel, ...) keep Model's
  *     constructor signature, so getInstance()'s `new static()` is safe.
  *
@@ -20,7 +28,7 @@ use orange\validate\interfaces\ValidateInterface;
  * @method static static getInstance(array $config, PDO $pdo, ValidateInterface $validate)
  * @method static static newInstance(array $config, PDO $pdo, ValidateInterface $validate)
  */
-abstract class Model extends Singleton
+abstract class Model extends ModelAbstract
 {
     // extended by child models
     protected array $rules = [];
@@ -38,50 +46,13 @@ abstract class Model extends Singleton
       'delete' => ['id'],
     */
 
-    // required in extending class
-    protected string $tablename;
-    protected string $primaryColumn = 'id';
-
-    protected string $entityClass;
-
-    // https://www.php.net/manual/en/pdostatement.fetch.php
-    protected int $defaultFetchType = PDO::FETCH_ASSOC;
-
-    // if type is PDO::FETCH_CLASS provide the class here
-    protected string $fetchClass = '';
-
-    // throw an exception on error or simply capture for further processing
-    protected bool $throwException = false;
-
-    protected Sql $sql;
-    protected Crud $crud;
-
-    protected function __construct(protected array $config, protected PDO $pdo, protected ValidateInterface $validate)
+    protected function __construct(array $config, PDO $pdo, protected ValidateInterface $validate)
     {
-        if (!isset($this->tablename)) {
-            $this->tablename = $this->generateTablename();
-        }
-
-        // setup sql config
-        $this->config = [
-            'primaryColumn' => $config['primaryColumn'] ?? $this->primaryColumn,
-            'tablename' => $config['tablename'] ?? $this->tablename,
-            'defaultFetchType' => $config['defaultFetchType'] ?? $this->defaultFetchType,
-            'fetchClass' => $config['fetchClass'] ?? $this->fetchClass,
-            // should the model throw exceptions?
-            'throwException' => $config['throwException'] ?? $this->throwException,
-        ];
+        parent::__construct($config, $pdo);
 
         // validateService should throw exceptions for all failed rules so we can catch them
         $this->validate->throwExceptionOnFailure(true);
-
-        // setup our own personal versions
-        $this->sql = new Sql($this->config, $pdo);
-
-        // crud always throws sql exceptions
-        $this->crud = new Crud($this->config, $pdo);
     }
-
 
     public function getRules(string $set): array
     {
@@ -109,27 +80,5 @@ abstract class Model extends Singleton
 
         // if any rules failed technically we shouldn't get here because an exception was thrown
         return $this->validate->hasNoErrors() ? $fields : false;
-    }
-
-    public function generateTablename(): string
-    {
-        $tablename = static::class;
-
-        $pos = strrpos($tablename, '\\');
-
-        if ($pos) {
-            $tablename = substr($tablename, $pos + 1);
-        }
-
-        if (str_ends_with(strtolower($tablename), 'model')) {
-            $tablename = substr($tablename, 0, -5);
-        }
-
-        return $tablename;
-    }
-
-    public function getLastInsertId(): string|false
-    {
-        return $this->pdo->lastInsertId();
     }
 }

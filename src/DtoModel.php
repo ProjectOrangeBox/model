@@ -6,7 +6,6 @@ namespace orange\model;
 
 use PDO;
 use orange\dto\Dto;
-use orange\framework\base\Singleton;
 use orange\model\exceptions\DtoValidationFailed;
 
 /**
@@ -21,13 +20,14 @@ use orange\model\exceptions\DtoValidationFailed;
  * to the insert are the Dto's db shape, so #[Column] remapping is honoured
  * without the model knowing about it.
  *
- * Because a Dto validates itself the moment it is constructed, there is no
- * validate service to inject - hence the two argument constructor.
+ * The table settings, the $sql and the $crud come from ModelAbstract. Because a
+ * Dto validates itself the moment it is constructed, there is no validate
+ * service to inject - so this takes that two argument constructor as it is,
+ * where Model has to widen it.
  *
  * @phpstan-consistent-constructor Subclasses keep DtoModel's constructor
  *     signature, so getInstance()'s `new static()` is safe.
- */
-/**
+ *
  * Singleton supplies the per-class instance cache and newInstance(). Its
  * getInstance() is declared getInstance(): mixed and forwards func_get_args(),
  * which PHP will not let a subclass narrow to a real signature - that is a
@@ -36,7 +36,7 @@ use orange\model\exceptions\DtoValidationFailed;
  * @method static static getInstance(array $config, PDO $pdo)
  * @method static static newInstance(array $config, PDO $pdo)
  */
-abstract class DtoModel extends Singleton
+abstract class DtoModel extends ModelAbstract
 {
     /**
      * Operation name => the Dto class that validates it.
@@ -49,47 +49,6 @@ abstract class DtoModel extends Singleton
       'update' => UpdateUserDto::class,
       'delete' => DeleteUserDto::class,
     */
-
-    // required in extending class
-    protected string $tablename;
-    protected string $primaryColumn = 'id';
-
-    protected string $entityClass;
-
-    // https://www.php.net/manual/en/pdostatement.fetch.php
-    protected int $defaultFetchType = PDO::FETCH_ASSOC;
-
-    // if type is PDO::FETCH_CLASS provide the class here
-    protected string $fetchClass = '';
-
-    // throw an exception on error or simply capture for further processing
-    protected bool $throwException = false;
-
-    protected Sql $sql;
-    protected Crud $crud;
-
-    protected function __construct(protected array $config, protected PDO $pdo)
-    {
-        if (!isset($this->tablename)) {
-            $this->tablename = $this->generateTablename();
-        }
-
-        // setup sql config
-        $this->config = [
-            'primaryColumn' => $config['primaryColumn'] ?? $this->primaryColumn,
-            'tablename' => $config['tablename'] ?? $this->tablename,
-            'defaultFetchType' => $config['defaultFetchType'] ?? $this->defaultFetchType,
-            'fetchClass' => $config['fetchClass'] ?? $this->fetchClass,
-            // should the model throw exceptions?
-            'throwException' => $config['throwException'] ?? $this->throwException,
-        ];
-
-        // setup our own personal versions
-        $this->sql = new Sql($this->config, $pdo);
-
-        // crud always throws sql exceptions
-        $this->crud = new Crud($this->config, $pdo);
-    }
 
     /**
      * The Dto class registered for an operation.
@@ -172,27 +131,5 @@ abstract class DtoModel extends Singleton
         }
 
         return implode(PHP_EOL, $lines);
-    }
-
-    public function generateTablename(): string
-    {
-        $tablename = static::class;
-
-        $pos = strrpos($tablename, '\\');
-
-        if ($pos) {
-            $tablename = substr($tablename, $pos + 1);
-        }
-
-        if (str_ends_with(strtolower($tablename), 'model')) {
-            $tablename = substr($tablename, 0, -5);
-        }
-
-        return $tablename;
-    }
-
-    public function getLastInsertId(): string|false
-    {
-        return $this->pdo->lastInsertId();
     }
 }
