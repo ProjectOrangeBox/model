@@ -301,8 +301,12 @@ class UserModel extends DtoModel
     {
         $dto = $this->requireDto('update', $input);
 
-        // the primary belongs in the WHERE, not the SET
-        return $this->crud->update($dto->asColumns(true), (int) $dto->primaryValue());
+        // the primary belongs in the WHERE, not the SET. Naming the table takes
+        // this model's share of the Dto (see below); true says an untagged Dto
+        // is all ours - the same ask validateFields() makes
+        $columns = $dto->asColumns(true, $this->tablename, true);
+
+        return $this->crud->update($columns, (int) $dto->primaryValue());
     }
 }
 
@@ -311,6 +315,55 @@ $users = UserModel::newInstance([], $pdo);
 $id = $users->create(['fname' => '  Ada  ', 'age' => '36']);
 // stored as ['first_name' => 'Ada', 'age' => 36] - Trim and ToInteger ran first
 ```
+
+### One Dto, several tables
+
+The Dtos above name no table, so each model takes every column they carry —
+the ordinary case, one Dto per model. Tag the properties and one Dto can carry
+a whole form instead, with each model taking only the columns that are its own:
+
+```php
+class ProfileFormDto extends Dto
+{
+    #[IsRequired] #[ToInteger] #[IsPrimary]
+    #[Column('id')] #[Table('users')]
+    public int $id;
+
+    #[IsRequired] #[Column('first_name')] #[Table('users')]
+    public string $firstName;
+
+    #[IsRequired] #[Column('bio')] #[Table('user_meta')]
+    public string $bio;
+
+    #[IsRequired]                                  // no table: neither model's
+    public string $confirm;
+}
+
+class UserModel extends DtoModel
+{
+    protected string $tablename = 'users';
+    protected array $dtos = ['save' => ProfileFormDto::class];
+}
+
+class UserMetaModel extends DtoModel
+{
+    protected string $tablename = 'user_meta';
+    protected array $dtos = ['save' => ProfileFormDto::class];
+}
+
+$users->validateFields('save', $input);      // ['id' => 7, 'first_name' => 'Ada']
+$userMeta->validateFields('save', $input);   // ['bio' => 'Engineer']
+```
+
+An untagged property (`$confirm`) belongs to no table, so it reaches neither
+insert — which is what you want for a field that validates but never persists.
+`$withoutPrimary` drops the primary from its own table only, so a second table
+keeping its own `id` column keeps it.
+
+If a Dto names tables and none of them is this model's — a mistyped `#[Table]`,
+or the wrong Dto registered for the operation — `validateFields()` throws
+`orange\model\exceptions\Model` rather than falling back. Writing another
+table's columns into this one is not a recoverable reading of that mistake.
 
 ### Failing validation
 

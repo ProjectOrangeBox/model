@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use orange\dto\Dto;
 use orange\model\DtoModel;
+use orange\model\exceptions\Model as ModelException;
 use orange\dto\attributes\Column;
 use orange\dto\attributes\Label;
 use orange\dto\attributes\Table;
@@ -90,8 +91,17 @@ class ExampleDtoModel extends DtoModel
         $dto = $this->requireDto('update', $input);
 
         // the primary identifies the row, so it belongs in the WHERE and not in
-        // the SET - asColumns(true) drops it for us
-        return $this->crud->update($dto->asColumns(true), (int) $dto->primaryValue());
+        // the SET - the first argument drops it for us. Naming the table takes
+        // this model's share of a Dto that spans several, and the last argument
+        // says an untagged Dto is all ours - the same ask validateFields() makes
+        $columns = $dto->asColumns(true, $this->tablename, true);
+
+        // null means the Dto names tables and none of them is ours
+        if ($columns === null) {
+            throw new ModelException($dto::class . ' has no columns for table "' . $this->tablename . '".');
+        }
+
+        return $this->crud->update($columns, (int) $dto->primaryValue());
     }
 
     public function read(int $id): array|bool

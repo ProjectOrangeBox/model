@@ -6,6 +6,7 @@ namespace orange\model;
 
 use PDO;
 use orange\dto\Dto;
+use orange\model\exceptions\Model as ModelException;
 use orange\model\exceptions\DtoValidationFailed;
 
 /**
@@ -19,6 +20,12 @@ use orange\model\exceptions\DtoValidationFailed;
  * array entries that have to be kept in step. It also means the values handed
  * to the insert are the Dto's db shape, so #[Column] remapping is honoured
  * without the model knowing about it.
+ *
+ * A Dto can also describe more than one table - tag the properties
+ * #[Table('users')] and #[Table('user_meta')] and one class carries a whole
+ * form. validateFields() then takes only the columns tagged for the table this
+ * model writes to; a hand-written method holding the Dto itself asks for the
+ * same share with $dto->asColumns($withoutPrimary, $this->tablename, true).
  *
  * The table settings, the $sql and the $crud come from ModelAbstract. Because a
  * Dto validates itself the moment it is constructed, there is no validate
@@ -105,14 +112,34 @@ abstract class DtoModel extends ModelAbstract
      * validation, and nothing the Dto didn't declare, reaches the database. Keys
      * are database column names, so #[Column] remapping is already applied.
      *
+     * This model's share of them, at that: a Dto tagged #[Table] for more than
+     * one table hands back only the columns tagged for the table this model
+     * writes to. A Dto that tags nothing hands back all of them.
+     *
      * Pass $withoutPrimary for an update's SET clause, where the primary belongs
      * in the WHERE instead.
      *
      * @throws DtoValidationFailed When the input does not pass
+     * @throws ModelException When the Dto names tables and none of them is this model's
      */
     public function validateFields(string $set, array $input, bool $withoutPrimary = false): array
     {
-        return $this->requireDto($set, $input)->asColumns($withoutPrimary);
+        $dto = $this->requireDto($set, $input);
+
+        // the assembled config, not the raw $tablename property - a config
+        // override is the table Sql and Crud were built with.
+        // orAllColumns: a Dto that names no table at all was written for one
+        // model and had no reason to name it, so all of it is this table's
+        $columns = $dto->asColumns($withoutPrimary, (string)$this->config['tablename'], true);
+
+        if ($columns === null) {
+            // it does name tables, just not this model's - a mistyped #[Table]
+            // or the wrong Dto registered for the operation. Persisting another
+            // table's columns into this one is not a recoverable reading of that
+            throw new ModelException($dto::class . ' has no columns for table "' . $this->config['tablename'] . '" on ' . static::class . '.');
+        }
+
+        return $columns;
     }
 
     /**
