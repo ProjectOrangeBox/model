@@ -25,7 +25,7 @@ use orange\model\exceptions\DtoValidationFailed;
  * #[Table('users')] and #[Table('user_meta')] and one class carries a whole
  * form. validateFields() then takes only the columns tagged for the table this
  * model writes to; a hand-written method holding the Dto itself asks for the
- * same share with $dto->asColumns($withoutPrimary, $this->tablename, true).
+ * same share with $dto->asColumns($withoutPrimary, $this->tablename).
  *
  * The table settings, the $sql and the $crud come from ModelAbstract. Because a
  * Dto validates itself the moment it is constructed, there is no validate
@@ -127,16 +127,16 @@ abstract class DtoModel extends ModelAbstract
         $dto = $this->requireDto($set, $input);
 
         // the assembled config, not the raw $tablename property - a config
-        // override is the table Sql and Crud were built with.
-        // orAllColumns: a Dto that names no table at all was written for one
-        // model and had no reason to name it, so all of it is this table's
-        $columns = $dto->asColumns($withoutPrimary, (string)$this->config['tablename'], true);
+        // override is the table Sql and Crud were built with. A Dto that names
+        // no table takes the name and answers with everything it has, which is
+        // the single-model case
+        $columns = $dto->asColumns($withoutPrimary, (string)$this->config['tablename']);
 
         if ($columns === null) {
             // it does name tables, just not this model's - a mistyped #[Table]
             // or the wrong Dto registered for the operation. Persisting another
             // table's columns into this one is not a recoverable reading of that
-            throw new ModelException($dto::class . ' has no columns for table "' . $this->config['tablename'] . '" on ' . static::class . '.');
+            throw new ModelException($dto::class . ' has no columns for table "' . $this->config['tablename'] . '" on ' . static::class . '. It names: ' . implode(', ', $dto->tables() ?? []) . '.');
         }
 
         return $columns;

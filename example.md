@@ -302,11 +302,13 @@ class UserModel extends DtoModel
         $dto = $this->requireDto('update', $input);
 
         // the primary belongs in the WHERE, not the SET. Naming the table takes
-        // this model's share of the Dto (see below); true says an untagged Dto
-        // is all ours - the same ask validateFields() makes
-        $columns = $dto->asColumns(true, $this->tablename, true);
+        // this model's share of the Dto (see below); a Dto that names no
+        // table takes the name and answers with all of it
+        $columns = $dto->asColumns(true, $this->tablename);
 
-        return $this->crud->update($columns, (int) $dto->primaryValue());
+        // this table's key too - a Dto spanning several tables carries one
+        // primary per table
+        return $this->crud->update($columns, (int) $dto->primaryValue($this->tablename));
     }
 }
 
@@ -359,6 +361,18 @@ An untagged property (`$confirm`) belongs to no table, so it reaches neither
 insert — which is what you want for a field that validates but never persists.
 `$withoutPrimary` drops the primary from its own table only, so a second table
 keeping its own `id` column keeps it.
+
+A Dto that names tables **requires** the name: `asColumns()` with no table
+throws a `LogicException`, because "every column" is not an answer any one of
+several tables can use. Ask `$dto->tables()` to see which case a Dto is — `null`
+means it names none, and takes any name you give it.
+
+Each table carries its own `#[IsPrimary]`, so ask for the key by table too —
+`$dto->primaryValue($this->tablename)`. Unqualified, `primaryValue()` on a Dto
+with more than one primary throws rather than answering with another table's
+key. Note `Crud`/`Sql::wherePrimary()` are single-column, so a genuinely
+**compound** key (two `#[IsPrimary]` in one table) can be described by a Dto but
+not yet consumed by `Crud` — build that WHERE yourself from `primaryValues()`.
 
 If a Dto names tables and none of them is this model's — a mistyped `#[Table]`,
 or the wrong Dto registered for the operation — `validateFields()` throws

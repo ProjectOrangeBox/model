@@ -33,6 +33,15 @@ class ProfileFormDto extends Dto
     #[Table('main')]
     public string $firstName;
 
+    // the join side carries its own key, so each model has one
+    #[IsRequired]
+    #[ToInteger]
+    #[Integer]
+    #[IsPrimary]
+    #[Column('id')]
+    #[Table('join')]
+    public int $childId;
+
     #[IsRequired]
     #[Column('child_name')]
     #[Table('join')]

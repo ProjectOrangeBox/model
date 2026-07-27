@@ -92,16 +92,19 @@ class ExampleDtoModel extends DtoModel
 
         // the primary identifies the row, so it belongs in the WHERE and not in
         // the SET - the first argument drops it for us. Naming the table takes
-        // this model's share of a Dto that spans several, and the last argument
-        // says an untagged Dto is all ours - the same ask validateFields() makes
-        $columns = $dto->asColumns(true, $this->tablename, true);
+        // this model's share of a Dto that spans several, and a Dto that names
+        // no table takes the name and answers with all of it - the same ask
+        // validateFields() makes
+        $columns = $dto->asColumns(true, $this->tablename);
 
         // null means the Dto names tables and none of them is ours
         if ($columns === null) {
             throw new ModelException($dto::class . ' has no columns for table "' . $this->tablename . '".');
         }
 
-        return $this->crud->update($columns, (int) $dto->primaryValue());
+        // this table's key, for the same reason as the columns above - a Dto
+        // spanning several tables carries one primary per table
+        return $this->crud->update($columns, (int) $dto->primaryValue($this->tablename));
     }
 
     public function read(int $id): array|bool

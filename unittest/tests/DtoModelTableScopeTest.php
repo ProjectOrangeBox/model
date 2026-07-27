@@ -34,6 +34,7 @@ final class DtoModelTableScopeTest extends \unitTestHelper
         return [
             'id' => '7',
             'firstName' => 'Johnny',
+            'childId' => '3',
             'childName' => 'Peter',
             'confirm' => 'yes',
         ];
@@ -47,9 +48,28 @@ final class DtoModelTableScopeTest extends \unitTestHelper
         );
 
         $this->assertSame(
-            ['child_name' => 'Peter'],
+            ['id' => 3, 'child_name' => 'Peter'],
             $this->join->validateFields('save', $this->validForm())
         );
+    }
+
+    /**
+     * Each table carries its own #[IsPrimary], so a model asks for the key the
+     * same way it asks for the columns. Unqualified there are two, and the Dto
+     * refuses to guess.
+     */
+    public function testEachModelTakesItsOwnTablesKey(): void
+    {
+        $dto = $this->main->requireDto('save', $this->validForm());
+
+        $this->assertSame(7, $dto->primaryValue('main'));
+        $this->assertSame(3, $dto->primaryValue('join'));
+
+        $this->assertSame(['id', 'id'], $dto->primaries());
+
+        $this->expectException(\LogicException::class);
+
+        $dto->primaryValue();
     }
 
     /**
@@ -98,7 +118,7 @@ final class DtoModelTableScopeTest extends \unitTestHelper
             $this->main->validateFields('save', $this->validForm(), true)
         );
 
-        // ... and join, which never had it, is untouched
+        // ... and join loses its own, not main's
         $this->assertSame(
             ['child_name' => 'Peter'],
             $this->join->validateFields('save', $this->validForm(), true)
@@ -113,11 +133,14 @@ final class DtoModelTableScopeTest extends \unitTestHelper
     {
         $dto = $this->main->requireDto('save', $this->validForm());
 
-        $this->assertSame(['id' => 7, 'first_name' => 'Johnny'], $dto->asColumns(false, 'main', true));
-        $this->assertSame(['first_name' => 'Johnny'], $dto->asColumns(true, 'main', true));
+        $this->assertSame(['id' => 7, 'first_name' => 'Johnny'], $dto->asColumns(false, 'main'));
+        $this->assertSame(['first_name' => 'Johnny'], $dto->asColumns(true, 'main'));
 
         // the same Dto instance, asked by the other model
-        $this->assertSame(['child_name' => 'Peter'], $dto->asColumns(false, 'join', true));
+        $this->assertSame(['id' => 3, 'child_name' => 'Peter'], $dto->asColumns(false, 'join'));
+
+        // and it says as much when asked what it describes
+        $this->assertSame(['main', 'join'], $dto->tables());
     }
 
     /**
@@ -128,6 +151,6 @@ final class DtoModelTableScopeTest extends \unitTestHelper
     {
         $model = MainProfileModel::newInstance(['tablename' => 'join'], $this->pdo);
 
-        $this->assertSame(['child_name' => 'Peter'], $model->validateFields('save', $this->validForm()));
+        $this->assertSame(['id' => 3, 'child_name' => 'Peter'], $model->validateFields('save', $this->validForm()));
     }
 }
