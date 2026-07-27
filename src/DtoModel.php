@@ -127,19 +127,21 @@ abstract class DtoModel extends ModelAbstract
         $dto = $this->requireDto($set, $input);
 
         // the assembled config, not the raw $tablename property - a config
-        // override is the table Sql and Crud were built with. A Dto that names
-        // no table takes the name and answers with everything it has, which is
-        // the single-model case
-        $columns = $dto->asColumns($withoutPrimary, (string)$this->config['tablename']);
+        // override is the table Sql and Crud were built with
+        $tablename = (string)$this->config['tablename'];
+        $tables = $dto->tables();
 
-        if ($columns === null) {
-            // it does name tables, just not this model's - a mistyped #[Table]
-            // or the wrong Dto registered for the operation. Persisting another
-            // table's columns into this one is not a recoverable reading of that
-            throw new ModelException($dto::class . ' has no columns for table "' . $this->config['tablename'] . '" on ' . static::class . '. It names: ' . implode(', ', $dto->tables() ?? []) . '.');
+        if ($tables !== null && !in_array($tablename, $tables, true)) {
+            // the Dto names tables, just not this model's - a mistyped #[Table]
+            // or the wrong Dto registered for the operation. asColumns() would
+            // throw on its own; this says which model was asking, which is the
+            // half of the report worth having
+            throw new ModelException($dto::class . ' has no columns for table "' . $tablename . '" on ' . static::class . '. It names: ' . implode(', ', $tables) . '.');
         }
 
-        return $columns;
+        // a Dto that names no table takes the name and answers with everything
+        // it has, which is the single-model case
+        return $dto->asColumns($withoutPrimary, $tablename);
     }
 
     /**

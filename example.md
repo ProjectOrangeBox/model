@@ -362,9 +362,10 @@ insert — which is what you want for a field that validates but never persists.
 `$withoutPrimary` drops the primary from its own table only, so a second table
 keeping its own `id` column keeps it.
 
-A Dto that names tables **requires** the name: `asColumns()` with no table
-throws a `LogicException`, because "every column" is not an answer any one of
-several tables can use. Ask `$dto->tables()` to see which case a Dto is — `null`
+A Dto that names tables **requires** the name: `asColumns()` with no table — or
+with one the Dto does not name — throws a `LogicException`, because "every
+column" is not an answer any one of several tables can use and a name it has
+not got is a typo. Ask `$dto->tables()` to see which case a Dto is — `null`
 means it names none, and takes any name you give it.
 
 Each table carries its own `#[IsPrimary]`, so ask for the key by table too —
@@ -376,8 +377,9 @@ not yet consumed by `Crud` — build that WHERE yourself from `primaryValues()`.
 
 If a Dto names tables and none of them is this model's — a mistyped `#[Table]`,
 or the wrong Dto registered for the operation — `validateFields()` throws
-`orange\model\exceptions\Model` rather than falling back. Writing another
-table's columns into this one is not a recoverable reading of that mistake.
+`orange\model\exceptions\Model`, naming the model that was asking and the
+tables the Dto does describe. (`asColumns()` would throw a `LogicException` on
+its own; the model checks first only to put itself in the message.)
 
 ### Failing validation
 
