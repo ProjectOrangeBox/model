@@ -33,17 +33,17 @@ abstract class Model extends ModelAbstract
     // extended by child models
     protected array $rules = [];
     /* rules example:
-      'id' => ['isRequired|isInteger', 'Id'],
-      'firstname' => ['isRequired|isString|isAlphaNumericSpace|maxLength[32]', 'First Name'],
-      'lastname' => ['isRequired|isString|isAlphaNumericSpace|maxLength[32]', 'Last Name'],
-      'age' => ['isRequired|isInteger|isGreaterThan[17]|isLessThan[111]', 'Age'],
+    'id' => ['isRequired|isInteger', 'Id'],
+    'firstname' => ['isRequired|isString|isAlphaNumericSpace|maxLength[32]', 'First Name'],
+    'lastname' => ['isRequired|isString|isAlphaNumericSpace|maxLength[32]', 'Last Name'],
+    'age' => ['isRequired|isInteger|isGreaterThan[17]|isLessThan[111]', 'Age'],
     */
 
     protected array $ruleSets = [];
     /* ruleSets example:
-      'create' => ['firstname', 'lastname', 'age'],
-      'update' => ['id', 'firstname', 'lastname', 'age'],
-      'delete' => ['id'],
+    'create' => ['firstname', 'lastname', 'age'],
+    'update' => ['id', 'firstname', 'lastname', 'age'],
+    'delete' => ['id'],
     */
 
     protected function __construct(array $config, PDO $pdo, protected ValidateInterface $validate)
