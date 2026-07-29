@@ -8,16 +8,30 @@ use PDO;
 use orange\framework\base\Singleton;
 
 /**
- * The plumbing Model and DtoModel share: the table/fetch settings, the config
- * they are assembled into, and the ready-made $sql and $crud built from it.
+ * A model's plumbing with no opinion on validation: the table/fetch settings,
+ * the config they are assembled into, and the ready-made $sql and $crud built
+ * from it.
  *
- * What is left to the two children is how an operation is validated - Model
- * pairs $rules with $ruleSets and runs them through the validate service,
- * DtoModel names one Dto class per operation - which is also why validation
- * has no place in here: their validateFields() take different arguments and
- * return different things, so there is nothing common to hoist.
+ * Extend this directly for a model that has no per-operation contract to
+ * enforce - one whose methods are hand-written queries, or whose input was
+ * already validated before it got here. Extend DtoModel when an operation
+ * should be checked against a Dto first; that is the only thing it adds.
  *
- * Not extended directly. Extend Model or DtoModel.
+ * There used to be a second child, Model, which paired $rules with $ruleSets
+ * and ran them through the orange/validate service. Dtos carry the rules, the
+ * filters, the labels and the column mapping in one class instead, so it was
+ * dropped and this package no longer depends on orange/validate.
+ *
+ * @phpstan-consistent-constructor Subclasses keep this constructor signature,
+ *     so getInstance()'s `new static()` is safe.
+ *
+ * Singleton supplies the per-class instance cache and newInstance(). Its
+ * getInstance() is declared getInstance(): mixed and forwards func_get_args(),
+ * which PHP will not let a subclass narrow to a real signature - that is a
+ * fatal, not a warning - so the types live in annotations instead.
+ *
+ * @method static static getInstance(array $config, PDO $pdo)
+ * @method static static newInstance(array $config, PDO $pdo)
  */
 abstract class ModelAbstract extends Singleton
 {

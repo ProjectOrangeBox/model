@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use orange\validate\Validate;
-
 final class ExampleCrudTest extends unitTestHelper
 {
     protected $instance;
@@ -21,7 +19,7 @@ final class ExampleCrudTest extends unitTestHelper
         // newInstance, not getInstance: getInstance() caches per class for the
         // whole process, which would hand every later test the first test's
         // (already discarded) connection
-        $this->instance = ExampleCrud::newInstance([], $this->pdo, Validate::newInstance([]));
+        $this->instance = ExampleCrud::newInstance([], $this->pdo);
     }
 
     public function testCreateUser(): void

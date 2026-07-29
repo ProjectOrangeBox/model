@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
-use orange\model\Model;
+use orange\model\ModelAbstract;
 
-class ExampleCrud extends Model
+/**
+ * Exercises Crud through a model, so it extends ModelAbstract - the arguments
+ * are already typed, and there is no Dto contract to add on top.
+ */
+class ExampleCrud extends ModelAbstract
 {
     // required in extending class
     protected string $tablename = 'main';

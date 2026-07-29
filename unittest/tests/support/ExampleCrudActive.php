@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
-use orange\model\Model;
-use orange\validate\interfaces\ValidateInterface;
+use orange\model\ModelAbstract;
 
-class ExampleCrudActive extends Model
+/**
+ * The soft-delete flavour of ExampleCrud, on ModelAbstract for the same reason.
+ */
+class ExampleCrudActive extends ModelAbstract
 {
     // required in extending class
     protected string $tablename = 'crud';
@@ -14,9 +16,9 @@ class ExampleCrudActive extends Model
     protected bool $deactiveOnDelete = true;
     protected bool $readOnlyActive = true;
 
-    public function __construct(array $config, PDO $pdo, ValidateInterface $validateService)
+    protected function __construct(array $config, PDO $pdo)
     {
-        parent::__construct($config, $pdo, $validateService);
+        parent::__construct($config, $pdo);
 
         $this->crud->activeColumn = $this->activeColumn;
         $this->crud->deactiveOnDelete = $this->deactiveOnDelete;

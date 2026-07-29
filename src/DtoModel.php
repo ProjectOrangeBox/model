@@ -10,16 +10,14 @@ use orange\model\exceptions\Model as ModelException;
 use orange\model\exceptions\DtoValidationFailed;
 
 /**
- * A model whose validation comes from a Dto class instead of the validate service.
+ * A model that checks an operation's input against a Dto before it goes near
+ * the database.
  *
- * Model keeps an operation's contract in two parallel arrays - $rules per field
- * and $ruleSets naming which fields take part - and runs them through the
- * validate service. Here an operation names one Dto class instead: the Dto's
- * attributes already carry the rules, the filters, the human labels and the
- * database column/table mapping, so a set is a single class rather than two
- * array entries that have to be kept in step. It also means the values handed
- * to the insert are the Dto's db shape, so #[Column] remapping is honoured
- * without the model knowing about it.
+ * An operation names one Dto class: the Dto's attributes already carry the
+ * rules, the filters, the human labels and the database column/table mapping,
+ * so a contract is a single class rather than several lists that have to be
+ * kept in step. It also means the values handed to the insert are the Dto's db
+ * shape, so #[Column] remapping is honoured without the model knowing about it.
  *
  * A Dto can also describe more than one table - tag the properties
  * #[Table('users')] and #[Table('user_meta')] and one class carries a whole
@@ -27,10 +25,10 @@ use orange\model\exceptions\DtoValidationFailed;
  * model writes to; a hand-written method holding the Dto itself asks for the
  * same share with $dto->asColumns($withoutPrimary, $this->tablename).
  *
- * The table settings, the $sql and the $crud come from ModelAbstract. Because a
- * Dto validates itself the moment it is constructed, there is no validate
- * service to inject - so this takes that two argument constructor as it is,
- * where Model has to widen it.
+ * The table settings, the $sql and the $crud come from ModelAbstract, which is
+ * also the base to extend when a model has no such contract to enforce. Because
+ * a Dto validates itself the moment it is constructed, there is nothing to
+ * inject and this adds nothing to that two argument constructor.
  *
  * @phpstan-consistent-constructor Subclasses keep DtoModel's constructor
  *     signature, so getInstance()'s `new static()` is safe.
@@ -108,9 +106,9 @@ abstract class DtoModel extends ModelAbstract
     /**
      * The validated columns for an operation, ready for an insert or update.
      *
-     * The DtoModel counterpart to Model::validateFields(): nothing that failed
-     * validation, and nothing the Dto didn't declare, reaches the database. Keys
-     * are database column names, so #[Column] remapping is already applied.
+     * Nothing that failed validation, and nothing the Dto didn't declare,
+     * reaches the database. Keys are database column names, so #[Column]
+     * remapping is already applied.
      *
      * This model's share of them, at that: a Dto tagged #[Table] for more than
      * one table hands back only the columns tagged for the table this model

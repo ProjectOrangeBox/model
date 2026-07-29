@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use orange\validate\Validate;
 final class ExampleModelTest extends unitTestHelper
 {
     protected $instance;
@@ -20,7 +19,7 @@ final class ExampleModelTest extends unitTestHelper
         // newInstance, not getInstance: getInstance() caches per class for the
         // whole process, which would hand every later test the first test's
         // (already discarded) connection
-        $this->instance = ExampleModel::newInstance([], $this->pdo, Validate::newInstance([]));
+        $this->instance = ExampleModel::newInstance([], $this->pdo);
     }
 
     /* Tests */

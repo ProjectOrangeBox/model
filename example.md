@@ -1,8 +1,8 @@
 # orange/model — Examples
 
-Worked examples for the three pieces you use directly: the `Sql` query builder,
-the `Crud` shortcut helper, and `DtoModel`. See [README.md](README.md) for the
-`Model` reference.
+Worked examples for the four pieces you use directly: the `Sql` query builder,
+the `Crud` shortcut helper, and the two model bases. See [README.md](README.md)
+for the reference.
 
 Which one to reach for:
 
@@ -10,11 +10,11 @@ Which one to reach for:
 | --- | --- |
 | `Crud` | The operation is a plain insert/update/delete/read on one table by primary key. |
 | `Sql` | You need joins, grouped conditions, paging, raw fragments — anything `Crud` doesn't cover. |
-| `Model` | You want validation from the validate service (`$rules` + `$ruleSets`). |
-| `DtoModel` | You want validation from a Dto class instead. |
+| `ModelAbstract` | You want a model with `$crud`/`$sql` set up and no validation contract. |
+| `DtoModel` | The same, plus operations checked against a Dto before they hit the database. |
 
-`Model` and `DtoModel` both hand you a ready `$this->crud` and `$this->sql`, so
-these examples compose.
+Both model bases hand you a ready `$this->crud` and `$this->sql`, so these
+examples compose.
 
 ---
 
@@ -227,11 +227,10 @@ $all = $crud->readOnlyActive(false)->readAll();
 
 ## DtoModel — validation from a Dto
 
-`DtoModel` is `Model`'s counterpart for packages that validate with
-`orange/dto`. `Model` splits an operation's contract across two arrays that have
-to stay in step — `$rules` per field, `$ruleSets` naming which fields take part.
-`DtoModel` names one Dto class per operation instead, and the Dto's attributes
-already carry the rules, the filters, the labels *and* the column mapping.
+`DtoModel` adds one thing to `ModelAbstract`: an operation names a Dto class,
+and input is checked against it before anything reaches the database. The Dto's
+attributes carry the rules, the filters, the labels *and* the column mapping
+together, so the whole contract for an operation is one class.
 
 ```php
 use orange\dto\Dto;
@@ -276,7 +275,7 @@ class UpdateUserDto extends CreateUserDto
 ```
 
 The model maps operations to those classes. Note the two-argument constructor —
-a Dto validates itself, so there is no validate service to inject:
+a Dto validates itself the moment it is built, so there is nothing to inject:
 
 ```php
 use orange\model\DtoModel;

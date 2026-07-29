@@ -2,9 +2,13 @@
 
 declare(strict_types=1);
 
-use orange\model\Model;
+use orange\model\ModelAbstract;
 
-class ExampleModel extends Model
+/**
+ * Hand-written queries and nothing else, so it extends ModelAbstract rather
+ * than DtoModel - there is no per-operation contract here to check input against.
+ */
+class ExampleModel extends ModelAbstract
 {
     // required in extending class
     protected string $tablename = 'main';

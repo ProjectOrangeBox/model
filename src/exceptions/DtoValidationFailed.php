@@ -48,6 +48,46 @@ class DtoValidationFailed extends Model
     }
 
     /**
+     * Whether anything actually failed.
+     *
+     * A DtoValidationFailed can legitimately carry no errors - getDtoClass()
+     * raises one for an unregistered operation, which is a wiring mistake rather
+     * than a field-level failure - so this is worth asking before formatting.
+     */
+    public function hasErrors(): bool
+    {
+        return $this->errors !== [];
+    }
+
+    /**
+     * Every message, flattened, one per line.
+     *
+     * @return array<int, string>
+     */
+    public function getErrorsAsArray(): array
+    {
+        return array_merge(...array_values($this->errors)) ?: [];
+    }
+
+    /**
+     * Every message wrapped for display, in field order.
+     *
+     * Mirrors orange\validate's ValidationFailed so a caller that formatted its
+     * errors that way - bin/aclCli.php, a form re-render - reads the same either
+     * side of a model moving from the validate service to a Dto.
+     */
+    public function getErrorsAsHtml(string $prefix = '', string $suffix = '', string $separator = PHP_EOL): string
+    {
+        $lines = [];
+
+        foreach ($this->getErrorsAsArray() as $message) {
+            $lines[] = $prefix . $message . $suffix;
+        }
+
+        return implode($separator, $lines);
+    }
+
+    /**
      * 406 Not Acceptable by default - read by the framework's exception handler.
      */
     public function getHttpCode(): int
