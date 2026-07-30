@@ -38,8 +38,8 @@ use orange\model\exceptions\DtoValidationFailed;
  * which PHP will not let a subclass narrow to a real signature - that is a
  * fatal, not a warning - so the types live in annotations instead.
  *
- * @method static static getInstance(array $config, PDO $pdo)
- * @method static static newInstance(array $config, PDO $pdo)
+ * @method static static getInstance(array<string, mixed> $config, PDO $pdo)
+ * @method static static newInstance(array<string, mixed> $config, PDO $pdo)
  */
 abstract class DtoModel extends ModelAbstract
 {
@@ -77,6 +77,8 @@ abstract class DtoModel extends ModelAbstract
      * already the answer - ask it isValid()/errors(), then asColumns() for the
      * values to persist. Use this when a failure is an expected outcome you want
      * to report on; use requireDto() when it isn't.
+     *
+     * @param array<string, mixed> $input
      */
     public function makeDto(string $set, array $input): Dto
     {
@@ -89,6 +91,7 @@ abstract class DtoModel extends ModelAbstract
      * Run input through an operation's Dto, insisting it passes.
      *
      * @throws DtoValidationFailed Carrying the Dto's own errors, nested detail included
+     * @param array<string, mixed> $input
      */
     public function requireDto(string $set, array $input): Dto
     {
@@ -119,6 +122,8 @@ abstract class DtoModel extends ModelAbstract
      *
      * @throws DtoValidationFailed When the input does not pass
      * @throws ModelException When the Dto names tables and none of them is this model's
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
      */
     public function validateFields(string $set, array $input, bool $withoutPrimary = false): array
     {

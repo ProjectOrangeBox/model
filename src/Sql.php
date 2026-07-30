@@ -27,8 +27,10 @@ use orange\model\exceptions\Sql as ExceptionsSql;
  * $sql->delete()->from('table')->wherePrimary(1)->build();
  * $sql->delete('table')->wherePrimary(1)->build();
  *
+ *
+ * @phpstan-type WhereRecord array{column: string, operator: mixed, value: mixed}|array{raw: string}
+ * @phpstan-type JoinRecord array{on: string, tablename: string, left: string, right: string}|array{column: string, value: mixed, bool: string, operator: string}
  */
-
 class Sql
 {
     public PDOStatement $pdoStatement;
@@ -47,22 +49,33 @@ class Sql
     protected bool $hasError = false;
 
     protected string $lastSQL = '';
+    /** @var array<array-key, mixed> the bound values of the last executed statement */
     protected array $lastArgs = [];
 
     protected int $fetchMode = PDO::FETCH_ASSOC;
+    /** @var array<array-key, mixed> constructor arguments for FETCH_CLASS */
     protected array $fetchArgs = [];
 
     protected string $sqlStatement = '';
+    /** @var array<array-key, mixed> */
     protected array $columns = [];
+    /** @var array<array-key, mixed> placeholder => value */
     protected array $bound = [];
 
+    /** @var array<array-key, WhereRecord> */
     protected array $where = [];
+    /** @var array<array-key, string> column => direction */
     protected array $orderBy = [];
+    /** @var array<array-key, mixed> */
     protected array $limit = [];
+    /** @var array<array-key, JoinRecord> */
     protected array $join  = [];
 
     protected string $implodeComma = ',';
 
+    /**
+     * @param array<string, mixed> $config
+     */
     public function __construct(protected array $config, public PDO $pdo)
     {
         // merge config
@@ -84,6 +97,9 @@ class Sql
         return $this->errorFormat();
     }
 
+    /**
+     * @return list<string>
+     */
     public function errors(): array
     {
         return [$this->errorFormat()];
@@ -96,6 +112,9 @@ class Sql
         return sprintf($format, (string)$this->errorCode, $this->errorMsg);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getLast(): array
     {
         return [
@@ -164,11 +183,17 @@ class Sql
         return $this->pdoStatement->fetch();
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function rows(): array
     {
         return $this->pdoStatement->fetchAll();
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function keyPair(): array
     {
         return $this->pdoStatement->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -184,6 +209,9 @@ class Sql
         return $this->pdoStatement->rowCount();
     }
 
+    /**
+     * @param array<array-key, mixed>|string $arg1
+     */
     public function set(array|string $arg1, mixed $value = null, bool $isRaw = false): self
     {
         if (is_array($arg1)) {
@@ -207,6 +235,9 @@ class Sql
         return $this;
     }
 
+    /**
+     * @param array<array-key, mixed>|string $arg1
+     */
     public function setRaw(array|string $arg1, mixed $value = null): self
     {
         return $this->set($arg1, $value, true);
@@ -222,11 +253,17 @@ class Sql
         return $this->set($name, $value, true);
     }
 
+    /**
+     * @param array<array-key, mixed> $array
+     */
     public function values(array $array): self
     {
         return $this->set($array);
     }
 
+    /**
+     * @param array<array-key, mixed> $array
+     */
     public function valuesRaw(array $array): self
     {
         return $this->set($array, null, true);
@@ -236,7 +273,7 @@ class Sql
     /**
      * Add a bound parameter identifier and value
      */
-    public function bindValue(string $column, $value): self
+    public function bindValue(string $column, mixed $value): self
     {
         $this->bound[$this->escapeColumnForBind($column)] = $value;
 
@@ -245,12 +282,17 @@ class Sql
 
     /**
      * Returns an array of bound parameter identifiers and there values
+     *
+     * @return array<array-key, mixed>
      */
     public function boundValues(): array
     {
         return $this->bound;
     }
 
+    /**
+     * @param array<array-key, mixed>|string $columns
+     */
     public function select(array|string $columns = '*'): self
     {
         $this->reset();
@@ -300,7 +342,7 @@ class Sql
         return $this->table($tablename);
     }
 
-    public function where(string $column, $operator, $value = null): self
+    public function where(string $column, mixed $operator, mixed $value = null): self
     {
         if ($value === null) {
             // if all 3 args not provided then assume it's a equals
@@ -312,7 +354,7 @@ class Sql
         return $this;
     }
 
-    public function whereEqual(string $column, $value): self
+    public function whereEqual(string $column, mixed $value): self
     {
         $this->where($column, '=', $value);
 
@@ -333,9 +375,15 @@ class Sql
         return $this;
     }
 
-    public function wherePrimary($value): self
+    public function wherePrimary(mixed $value): self
     {
-        $this->whereEqual(substr($this->tablename, strrpos(' ' . $this->tablename, ' ')) . '.' . $this->primaryColumn, $value);
+        // prefixing a space guarantees a match, and its index in the prefixed
+        // string is exactly the offset just past the last space in the original -
+        // so an aliased "schema table" yields "table" and a plain name yields itself
+        $offset = strrpos(' ' . $this->tablename, ' ');
+        $tablename = $offset === false ? $this->tablename : substr($this->tablename, $offset);
+
+        $this->whereEqual($tablename . '.' . $this->primaryColumn, $value);
 
         return $this;
     }
@@ -387,6 +435,9 @@ class Sql
         return $this;
     }
 
+    /**
+     * @param array<array-key, mixed> $values
+     */
     public function whereIn(string $column, array $values): self
     {
         $builder = new StringBuilder($this->implodeComma);
@@ -411,11 +462,15 @@ class Sql
      * whereColumnRaw('foo','IS NULL');
      * whereColumnRaw('Price','NOT BETWEEN :priceStart AND :priceEnd',['priceStart'=>10,'priceEnd=>'20]);
      */
-    public function whereColumnRaw(string $column, string $append, $value = null): self
+    public function whereColumnRaw(string $column, string $append, mixed $value = null): self
     {
         return $this->whereRaw($this->escapeTableColumn($column) . ' ' . $append, $value);
     }
 
+    /**
+     * @param array<array-key, mixed>|string $value
+     * @param array<array-key, mixed>|null $value
+     */
     public function whereRaw(string $raw, ?array $value = null): self
     {
         $where['raw'] = $raw;
@@ -645,7 +700,7 @@ class Sql
         $builder = new StringBuilder($this->implodeComma);
 
         foreach ($this->orderBy as $column => $dir) {
-            $builder->append(trim($this->escapeTableColumn($column) . ' ' . $dir));
+            $builder->append(trim($this->escapeTableColumn((string) $column) . ' ' . $dir));
         }
 
         return $builder->getIfHas('ORDER BY ');
@@ -681,6 +736,9 @@ class Sql
         return $this;
     }
 
+    /**
+     * @param array<array-key, mixed> $args
+     */
     public function query(string $sql, array $args = []): PDOStatement
     {
         $this->reset();
@@ -690,7 +748,15 @@ class Sql
 
         try {
             if (empty($args)) {
-                $this->pdoStatement = $this->pdo->query($sql);
+                // PDO::query() returns false on failure, and under ERRMODE_SILENT
+                // that is the only signal - the property is typed PDOStatement
+                $statement = $this->pdo->query($sql);
+
+                if ($statement === false) {
+                    throw new ExceptionsSql('query failed: ' . $sql);
+                }
+
+                $this->pdoStatement = $statement;
 
                 $this->updateFetchMode();
             } else {
@@ -738,6 +804,9 @@ class Sql
         }
     }
 
+    /**
+     * @param array<array-key, mixed> $fetchArgs
+     */
     public function setFetchMode(int|string $fetchMode, array $fetchArgs = []): self
     {
         if (is_int($fetchMode)) {
@@ -754,7 +823,9 @@ class Sql
 
     public function updateFetchMode(): self
     {
-        if ($this->fetchMode == PDO::FETCH_CLASS) {
+        // FETCH_CLASS without a class is FETCH_MODE with a null argument, which
+        // setFetchMode() rejects - fall back rather than fail
+        if ($this->fetchMode == PDO::FETCH_CLASS && $this->fetchClass !== null) {
             $this->pdoStatement->setFetchMode(PDO::FETCH_CLASS, $this->fetchClass, $this->fetchArgs);
         } else {
             $this->pdoStatement->setFetchMode($this->fetchMode);

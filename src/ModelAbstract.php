@@ -30,8 +30,8 @@ use orange\framework\base\Singleton;
  * which PHP will not let a subclass narrow to a real signature - that is a
  * fatal, not a warning - so the types live in annotations instead.
  *
- * @method static static getInstance(array $config, PDO $pdo)
- * @method static static newInstance(array $config, PDO $pdo)
+ * @method static static getInstance(array<string, mixed> $config, PDO $pdo)
+ * @method static static newInstance(array<string, mixed> $config, PDO $pdo)
  */
 abstract class ModelAbstract extends Singleton
 {
@@ -53,6 +53,9 @@ abstract class ModelAbstract extends Singleton
     protected Sql $sql;
     protected Crud $crud;
 
+    /**
+     * @param array<string, mixed> $config
+     */
     protected function __construct(protected array $config, protected PDO $pdo)
     {
         if (!isset($this->tablename)) {

@@ -6,6 +6,7 @@ namespace orange\model;
 
 class StringBuilder
 {
+    /** @var list<string> */
     protected array $append;
 
     public function __construct(protected string $separator = ' ', protected bool $autoTrim = true)

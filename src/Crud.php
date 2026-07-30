@@ -18,6 +18,9 @@ class Crud
     public bool $readOnlyActive = false;
     protected Sql $sql;
 
+    /**
+     * @param array<string, mixed> $config
+     */
     public function __construct(protected array $config, protected PDO $pdo)
     {
         // merge config
@@ -32,11 +35,17 @@ class Crud
         $this->sql->throwExceptions(true);
     }
 
+    /**
+     * @param array<array-key, mixed> $columns
+     */
     public function create(array $columns): int
     {
         return (int)$this->sql->insert()->into()->set($columns)->execute()->lastInsertId();
     }
 
+    /**
+     * @param array<array-key, mixed> $columns
+     */
     public function update(array $columns, int $primaryId): bool
     {
         return $this->sql->update()->set($columns)->wherePrimary($primaryId)->execute()->rowCount() > 0;
@@ -63,6 +72,9 @@ class Crud
         return $this->sql->update()->set([$this->activeColumn => 1])->wherePrimary($primaryId)->execute()->rowCount() > 0;
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function readAll(): array
     {
         $this->sql->select('*')->from();
@@ -74,6 +86,9 @@ class Crud
         return $this->sql->execute()->rows();
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public function read(int $primaryId): array|bool
     {
         $this->sql->select()->from()->wherePrimary($primaryId);
@@ -92,7 +107,7 @@ class Crud
         return $this;
     }
 
-    public function readValueById(string $column, $id): mixed
+    public function readValueById(string $column, mixed $id): mixed
     {
         return $this->sql->select($column)->from()->wherePrimary($id)->execute()->column(0);
     }
